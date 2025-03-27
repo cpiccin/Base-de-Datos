@@ -53,3 +53,94 @@ OPT = DIRS÷GEN_WELLES
 ```
 
 g) Actores que filmaron m ́as de una pel ́ıcula en el mismo año, a partir de 1999
+```
+PEL1999 = σyear>=1999(movies)
+CAST1999 = PEL1999 ⨝roles.movie_id=movies.id roles
+
+R1 = ρR1(πroles.actor_id,movies.name,movies.year(CAST1999))
+R2 = ρR2(πroles.actor_id,movies.name,movies.year(CAST1999))
+
+/* todas las posibles combinaciones entre peliculas, anios y actores: AUTOJOIN*/
+COMP = R1 ⨝(R1.actor_id=R2.actor_id) R2
+/*filtra para que el actor_id se el mismo, el anio tambien y que el nombre de la peli sea distinto*/
+REQ_ACTORS = σ(R1.year=R2.year∧R1.actor_id=R2.actor_id∧R1.name<R2.name)(COMP)
+
+INFO_ACT = REQ_ACTORS ⨝R1.actor_id=actors.id actors
+
+πfirst_name,last_name(INFO_ACT)
+```
+
+h) Listar las pel ́ıculas del  ́ultimo a ̃no.
+```
+
+R1 = ρR1(movies)
+R2 = ρR2(movies)
+
+/*cada película "más nueva" (de R1) se relaciona con todas las películas "más antiguas" (de R2).*/
+COMP = R1 ⨝(R1.year>R2.year) R2
+
+/*al restar las películas de R2 de todas las películas, se obtienen las del año más reciente.*/
+πname,year(movies) - πR2.name,R2.year(COMP)
+```
+
+i) Pel ́ıculas del director Spielberg en las que actu ́o Harrison (I) Ford.
+```
+/* i) Pel ́ıculas del director Spielberg en las que actu ́o Harrison (I) Ford.*/
+HF = σactors.first_name='Harrison (I)'∧actors.last_name='Ford'(actors)
+SS = σdirectors.last_name='Spielberg'(directors)
+
+SS_M = SS ⨝directors.id=movies_directors.director_id movies_directors
+
+HF_M = HF ⨝roles.actor_id=actors.id roles
+
+PELIS = πmovie_id(SS_M) ⨝movies_directors.movie_id=roles.movie_id πmovie_id(HF_M)
+
+NOMBRES = movies ⨝movies.id=movies_directors.movie_id PELIS
+πname(NOMBRES)
+```
+
+j) Pel ́ıculas del director Spielberg en las que no actu ́o Harrison (I) Ford.
+```
+/* j) Pel ́ıculas del director Spielberg en las que no actu ́o Harrison (I) Ford.*/
+HF = σactors.first_name='Harrison (I)'∧actors.last_name='Ford'(actors)
+SS = σdirectors.last_name='Spielberg'(directors)
+
+SS_M = SS ⨝directors.id=movies_directors.director_id movies_directors
+
+HF_M = HF ⨝roles.actor_id=actors.id roles
+
+PELIS = πmovie_id(SS_M) - πmovie_id(HF_M)
+
+NOMBRES = movies ⨝movies.id=movies_directors.movie_id PELIS
+πname(NOMBRES)
+```
+
+k) Pel ́ıculas en las que actu ́o Harrison (I) Ford que no dirigi ́o Spielberg.
+```
+HF = σactors.first_name='Harrison (I)'∧actors.last_name='Ford'(actors)
+SS = σdirectors.last_name='Spielberg'(directors)
+
+HF_M = HF ⨝roles.actor_id=actors.id roles
+
+PELIS_NSS = movies_directors ⨝directors.id<>movies_directors.director_id SS
+
+CAST = roles ⨝actors.id=roles.actor_id HF
+
+DIF = PELIS_NSS ⨝roles.movie_id=movies_directors.movie_id CAST
+
+πname(DIF ⨝roles.movie_id=movies.id movies)
+```
+
+l) Directores que filmaron pel ́ıculas de m ́as de tres g ́eneros distintos, uno de los cuales sea
+’Film-Noir’.
+```
+/*l) Directores que filmaron pel ́ıculas de m ́as de tres g ́eneros distintos, uno de los cuales sea ’Film-Noir’..*/
+
+DIR_FN = ρDIR_FN(σgenre='Film-Noir'(directors_genres))
+/* todas las pelis de aquellos que tienen alguna en Film-Noir*/
+ALL_GENRES = directors_genres ⨝directors_genres.director_id=DIR_FN.director_id DIR_FN
+UNIQUE_GEN = πdirectors_genres.director_id,directors_genres.genre(ALL_GENRES)
+
+πfirst_name,last_name(UNIQUE_GEN ⨝directors_genres.director_id=directors.id directors)
+CONTINUA
+```
